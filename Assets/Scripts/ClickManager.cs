@@ -4,30 +4,10 @@ using UnityEngine;
 
 public class ClickManager : MonoBehaviour
 {
+	const float MAXSWIPEDIST = 1.0f;
 	Piece selectedPiece = null;
-	Piece connectedPiece = null;
-	
-	int findWinnerPoint(int distance, int strengthA, int strengthB, int pointA, int pointB)
-	{
-		int result = 0;
-		if (distance % 2 != 0)
-		{
-			if (strengthA > strengthB)
-			{
-				result = pointA + distance / 2;
-			}
-			else
-			{
-				result = pointB - distance/2;
-			}
-		}
-		else
-		{
-			result = pointA + distance / 2;
-		}
-		return result;
-	}
-	// Update is called once per frame
+	public SpriteRenderer whiteLine;
+	bool isSwiping = false;
 	void Update()
 	{
 		Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -40,60 +20,47 @@ public class ClickManager : MonoBehaviour
 				if (hit.collider.tag == "Triangle")
 					selectedPiece = hit.collider.GetComponent<Piece>();
 				if (selectedPiece != null)
+				{
 					selectedPiece.onSelect();
+					isSwiping = true;
+				}
 			}
 		}
-		if (selectedPiece != null && Input.GetMouseButtonUp(0))
+		if(Input.GetMouseButtonUp(0))
 		{
-			RaycastHit2D hit = Physics2D.Raycast(mousePos2D, Vector2.zero);
-			if (hit.collider != null && hit.collider.gameObject!=selectedPiece.gameObject)
-			{
-				if ((hit.collider.tag == "Triangle" || hit.collider.tag == "Square")&&(Mathf.Abs(selectedPiece.transform.position.x-hit.collider.transform.position.x)<0.01f)|| (Mathf.Abs(selectedPiece.transform.position.y - hit.collider.transform.position.y)<0.01f))
-					connectedPiece = hit.collider.GetComponent<Piece>();
-				if (connectedPiece != null)
-				{
-					//connection process
-					int strengthA = selectedPiece.strength;
-					int strengthB = connectedPiece.strength;
-					connectedPiece.onConnect(selectedPiece, strengthA);
-					if (selectedPiece.tag!=connectedPiece.tag)
-						selectedPiece.onConnect(connectedPiece, strengthB);
-					//after connection
-					if (selectedPiece.tag == connectedPiece.tag)
-					{
-						selectedPiece.isLost = true;
-						selectedPiece.moveTo(connectedPiece);
-						connectedPiece.moveTo(connectedPiece);
-					}
-					else
-					{
-						connectedPiece.isLost = strengthA >= strengthB;
-						selectedPiece.isLost = strengthB >= strengthA;
-						int distCol = connectedPiece.col - selectedPiece.col;
-						int distRow = connectedPiece.row - selectedPiece.row;
-						int winnerPoint = 0;
-						Vector2 newPoint = new Vector2(0, 0);
-						if (distCol != 0)
-						{
-							winnerPoint = findWinnerPoint(distCol, strengthA, strengthB, selectedPiece.col, connectedPiece.col);
-							newPoint = new Vector2(winnerPoint, selectedPiece.row);
-						}
-						if (distRow != 0)
-						{
-							winnerPoint = findWinnerPoint(distRow, strengthA, strengthB, selectedPiece.row, connectedPiece.row);
-							newPoint = new Vector2(selectedPiece.col,winnerPoint );
-						}
-						selectedPiece.moveTo(newPoint);
-						connectedPiece.moveTo(newPoint);
-					}
-				}
-				connectedPiece = null;
-			}
-			if (selectedPiece!=null && connectedPiece == null)
+			isSwiping = false;
+			if (selectedPiece != null)
 			{
 				selectedPiece.onDeselect();
+				selectedPiece = null;
+				whiteLine.transform.position = transform.position + new Vector3(0, 0, -1);
+				whiteLine.transform.localScale = new Vector3(0, 1, 1);
 			}
-			selectedPiece = null;
+		}
+		if (isSwiping)
+		{
+			if (selectedPiece != null)
+			{
+				////----TOUCHSCREEN-------
+				//getting touch position
+				Vector3 targetPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+				Vector3 distance = targetPos - selectedPiece.transform.position; distance.z = 0;
+				//straightening the whiteline
+				if (Mathf.Abs(distance.x) > Mathf.Abs(distance.y)) distance -= new Vector3(0, distance.y, 0);
+				else distance -= new Vector3(distance.x, 0, 0);
+				whiteLine.transform.position = selectedPiece.transform.position + distance / 2 + new Vector3(0, 0, -1);
+				float angle = Mathf.Atan2(distance.y, distance.x) * Mathf.Rad2Deg;
+				whiteLine.transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+				whiteLine.transform.localScale = new Vector3(distance.magnitude, 1, 1);
+				//checking length
+				if (distance.magnitude > MAXSWIPEDIST)
+				{
+					selectedPiece.movePiece(distance);
+					selectedPiece = null;
+					whiteLine.transform.position = transform.position + new Vector3(0, 0, -1);
+					whiteLine.transform.localScale = new Vector3(0, 1, 1);
+				}
+			}
 		}
 	}
 }
