@@ -7,6 +7,8 @@ TagManager:
   - Square
   - Triangle
   - Wall
+  - Circle
+  - InactiveCircle
   layers:
   - Default
   - TransparentFX
@@ -19,7 +21,7 @@ TagManager:
   - Piece
   - Player
   - Wall
-  - 
+  - InactiveCircles
   - 
   - 
   - 

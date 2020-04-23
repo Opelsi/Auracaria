@@ -7,21 +7,25 @@ public class Piece : MonoBehaviour
 {
 
 	const float MAXMOVEDIST = 10.0f;
-
-	public Sprite sprite_1, sprite_2, sprite_3;
-	public SpriteRenderer sprite_selected, currentSprite;
-	public LayerMask moveObstacles; 
-
+	public Sprite[] numbers;
+	public SpriteRenderer selectedSprite, strengthSprite;
 	public int strength = 1;
-	private bool isSelected = false, isConnected = false, isMoving = false;
+
+	public bool isMoving = false;
 	public bool isLost = false;
 
-	public int col = 0, row = 0;
-	private Vector2 target = new Vector2(0, 0);
-    // Start is called before the first frame update
-    void Start()
+	public int col = 0, row = 0;				//col and row coordinates
+	private Vector2 target = new Vector2(0, 0); //uses col and row coordinates
+	private LayerMask pieceObstacles;
+	private bool isSelected = false;
+	private bool isConnected = false;
+
+	Piece connectedPiece = null;
+
+	// Start is called before the first frame update
+	void Start()
 	{
-		moveObstacles = ~(LayerMask.GetMask("Player"));
+		pieceObstacles = ~(1<<9|1<<11);//all layers except 9 and 11
 		row = Mathf.RoundToInt(3 - transform.position.y);
 		col = Mathf.RoundToInt(3 + transform.position.x);
 	}
@@ -29,26 +33,12 @@ public class Piece : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-		switch (strength)
-		{
-			case 1:
-				currentSprite.sprite = sprite_1;
-				break;
-			case 2:
-				currentSprite.sprite = sprite_2;
-				break;
-			case 3:
-				currentSprite.sprite = sprite_3;
-				break;
-		}
+		if(numbers!=null && numbers.Length!=0)
+		strengthSprite.sprite = numbers[strength];
 	}
 	private void FixedUpdate()
 	{
-		sprite_selected.enabled = isSelected || isConnected || isMoving;
-		if (isSelected)
-		{
-			//if is selected
-		}
+		selectedSprite.enabled = isSelected;
 		if (isMoving)
 		{
 			Vector3 startPoint = transform.position;
@@ -57,37 +47,62 @@ public class Piece : MonoBehaviour
 			if (Mathf.Abs(transform.position.x - endPoint.x) < 0.1f && Mathf.Abs(transform.position.y - endPoint.y) < 0.1f)
 			{
 				isMoving = false;
+				//Piece full stop
 				transform.position = endPoint;
 				row = Mathf.RoundToInt(3 - transform.position.y);
 				col = Mathf.RoundToInt(3 + transform.position.x);
-				if (isLost) Destroy(gameObject);
-				isConnected = false;
 			}
 		}
+		if (tag != "Circle")
+		{
+			//Piece connection
+			RaycastHit2D hit = Physics2D.Raycast(new Vector2(transform.position.x, transform.position.y), Vector2.zero, 0.0f, pieceObstacles.value);
+			if (hit.collider != null && hit.collider.gameObject != gameObject)
+			{
+				if (!isConnected && !isMoving)
+				{
+					connectedPiece = hit.collider.GetComponent<Piece>();
+					int tmp = strength;
+					isConnected = true;
+					onConnect(connectedPiece, connectedPiece.strength);
+					connectedPiece.onConnect(this, tmp);
+				}
+			}
+			isConnected = false;
+		}
+		if (isLost) Destroy(gameObject);
 	}
 	public void onSelect()
 	{
 		if (!isMoving)isSelected = true;
+		gameObject.layer = LayerMask.NameToLayer("Player");
 	}
 	public void onDeselect()
 	{
 		isSelected = false;
+		gameObject.layer = LayerMask.NameToLayer("Piece");
 	}
 	public void movePiece(Vector2 newDirection)
 	{
-		onDeselect();
 		Vector3 origin = transform.position;
 		Vector3 direction = (new Vector3(newDirection.x, newDirection.y, transform.position.z)).normalized;
-		RaycastHit2D hit = Physics2D.Raycast(origin, direction, MAXMOVEDIST, moveObstacles.value);
+		RaycastHit2D hit = Physics2D.Raycast(origin, direction, MAXMOVEDIST, pieceObstacles.value);
 		if (hit.collider!=null)
 		{
 			if (hit.collider.gameObject != gameObject)
 			{
-				if(hit.collider.tag == "Square")
+				if (connectedPiece != null)
+				{
+					if (connectedPiece.tag == "Circle") { connectedPiece.gameObject.layer = LayerMask.NameToLayer("Piece"); connectedPiece = null; }
+				}
+				if (hit.collider.tag == "Circle")
 				{
 					isMoving = true;
-					Piece otherPiece = hit.collider.GetComponent<Piece>();
-					//Add logic to placing of winning and losing piece
+					target = hit.collider.transform.position;
+				}
+				if (hit.collider.tag == "Square")
+				{
+					isMoving = true;
 					target = hit.collider.transform.position;
 				}
 				if (hit.collider.tag == "Triangle")
@@ -106,10 +121,14 @@ public class Piece : MonoBehaviour
 	}
 	public void onConnect( Piece otherPiece, int tmpStrength )
 	{
-		isConnected = true;
-		if (otherPiece.tag == tag) strength += tmpStrength;
-		else strength -= tmpStrength;
+		if (tag != "Circle")
+		{
+			if (otherPiece.tag == tag) { strength += tmpStrength; otherPiece.isLost = true; isLost = false; }
+			else if (otherPiece.tag != "Circle") strength -= tmpStrength;
+		}
+		else { strength--; gameObject.layer = LayerMask.NameToLayer("InactiveCircles"); }
 		if (strength < 0) strength = 0;
+		if (strength == 0) isLost = true;
 	}
 	//old script
 	public void moveTo(float x, float y )

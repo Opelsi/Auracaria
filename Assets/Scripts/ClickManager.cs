@@ -8,8 +8,9 @@ public class ClickManager : MonoBehaviour
 	Piece selectedPiece = null;
 	public SpriteRenderer whiteLine;
 	bool isSwiping = false;
-	void Update()
+	private void Update()
 	{
+
 		Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 		Vector2 mousePos2D = new Vector2(mousePos.x, mousePos.y);
 		if (Input.GetMouseButtonDown(0))
@@ -26,6 +27,9 @@ public class ClickManager : MonoBehaviour
 				}
 			}
 		}
+	}
+	void FixedUpdate()
+	{
 		if(Input.GetMouseButtonUp(0))
 		{
 			isSwiping = false;
@@ -41,7 +45,6 @@ public class ClickManager : MonoBehaviour
 		{
 			if (selectedPiece != null)
 			{
-				////----TOUCHSCREEN-------
 				//getting touch position
 				Vector3 targetPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 				Vector3 distance = targetPos - selectedPiece.transform.position; distance.z = 0;
@@ -56,6 +59,7 @@ public class ClickManager : MonoBehaviour
 				if (distance.magnitude > MAXSWIPEDIST)
 				{
 					selectedPiece.movePiece(distance);
+					selectedPiece.onDeselect();
 					selectedPiece = null;
 					whiteLine.transform.position = transform.position + new Vector3(0, 0, -1);
 					whiteLine.transform.localScale = new Vector3(0, 1, 1);

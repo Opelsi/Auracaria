@@ -131,7 +131,7 @@ PrefabInstance:
     - target: {fileID: 3738826609948275264, guid: 7774e2a7515edce4cb26e44696e3c6f0,
         type: 3}
       propertyPath: m_Name
-      value: ClickManager
+      value: ControlManager
       objectReference: {fileID: 0}
     - target: {fileID: 3738826609948275271, guid: 7774e2a7515edce4cb26e44696e3c6f0,
         type: 3}
