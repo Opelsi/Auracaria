@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 using UnityEngine;
 
 public class KeyboardManager : MonoBehaviour
@@ -41,6 +42,8 @@ public class KeyboardManager : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
+		string currentSceneName = SceneManager.GetActiveScene().name;
+		if (Input.GetKeyDown(KeyCode.R)) SceneManager.LoadScene(currentSceneName);
 		if (triangles != null)
 		{
 			if (selectedPiece != null && !selectedPiece.isMoving && isMoving)
